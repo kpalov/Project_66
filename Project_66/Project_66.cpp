@@ -4,6 +4,8 @@
 #include <ctime>
 #include <fstream>
 constexpr int DECK_SIZE = 24;
+constexpr int CARDS_IN_HAND = 6;
+
 enum CardValue
 {
 	Ace = 11,
@@ -168,12 +170,125 @@ void printDeck(Card* deck, size_t deckSize, WORD originalColor) // used only for
 		std::cout << std::endl;
 	}
 }
+void startingDeal(const int NUMBER_OF_DEALED_CARDS, Card* deck, Player& player1, Player& player2)
+{
+	if (!deck) {
+		return;
+	}
+	for (size_t i = 0, pos1 = 0, pos2 = 0; i < NUMBER_OF_DEALED_CARDS; i++)
+	{
+		if (i < 3) {
+			player1.deck[pos1] = deck[i];
+			pos1++;
+		}
+		else if (i < 6) {
+			player2.deck[pos2] = deck[i];
+			pos2++;
+		}
+		else if (i < 9) {
+			player1.deck[pos1] = deck[i];
+			pos1++;
+		}
+		else {
+			player2.deck[pos2] = deck[i];
+			pos2++;
+		}
+	}
+	player1.cardsInHand = NUMBER_OF_DEALED_CARDS / 2;
+	player2.cardsInHand = NUMBER_OF_DEALED_CARDS / 2;
+}
+void orderHand(Card* hand, size_t length)
+{
+	if (!hand) {
+		return;
+	}
+	size_t maxIndex = 0;
+	for (size_t i = 0; i < length - 1; i++)
+	{
+		maxIndex = i;
+		for (size_t j = i + 1; j < length; j++)
+		{
+			if (hand[j].suit > hand[maxIndex].suit) {
+				maxIndex = j;
+			}
+			else if (hand[j].suit == hand[maxIndex].suit) {
+				if (hand[j].value > hand[maxIndex].value) {
+					maxIndex = j;
+				}
+			}
+		}
+		if (maxIndex != i) {
+			cardSwap(hand[maxIndex], hand[i]);
+		}
+	}
+}
+void hand(Player player, size_t playerInTurn, WORD originalColor)
+{
+	if (playerInTurn == 1) {
+		std::cout << std::endl << "Your hand (P1): [";
+	}
+	else {
+		std::cout << std::endl << "Your hand (P2): [";
+	}
+	for (size_t i = 0; i < player.cardsInHand; i++)
+	{
+		printValue(player.deck[i].value);
+		printSuit(player.deck[i].suit, originalColor);
+		if (i == player.cardsInHand - 1) {
+			std::cout << "]";
+		}
+		else {
+			std::cout << ", ";
+		}
+	}
+}
+Card* resizeDeck(Card* deck, size_t beg, size_t end, size_t& deckSize, bool sendFirstToBack = false)
+{
+	if (!deck) {
+		return nullptr;
+	}
+	if (beg > end) {
+		return nullptr;
+	}
+	deckSize = end - (beg + 1);
+	if (deckSize == 0) {
+		delete[] deck;
+		return nullptr;
+	}
+	Card* resizedDeck = new Card[deckSize];
+	if (sendFirstToBack) {
+		for (size_t i = beg + 1, j = 0; j < deckSize; i++, j++)
+		{
+			resizedDeck[j] = deck[i];
+		}
+		resizedDeck[deckSize - 1] = deck[beg];
+	}
+	else {
+		for (size_t i = beg, j = 0; j < deckSize; i++, j++)
+		{
+			resizedDeck[j] = deck[i];
+		}
+	}
+	delete[] deck;
+	return resizedDeck;
+}
 int main()
 {
+	SetConsoleOutputCP(CP_UTF8);
 	WORD originalColor = getCurrentConsoleColor();
 	Card* deck = new Card[DECK_SIZE];
+	Player player1, player2;
+	player1.deck = new Card[CARDS_IN_HAND];
+	player2.deck = new Card[CARDS_IN_HAND];
 	size_t deckSize = DECK_SIZE;
 	fillDeck(deck, deckSize);
 	shuffleDeck(deck, deckSize);
+	//printDeck(deck, deckSize, originalColor);
+	startingDeal(12, deck, player1, player2);
+	orderHand(player1.deck, player1.cardsInHand);
+	orderHand(player2.deck, player2.cardsInHand);
+	hand(player1, 1, originalColor);
+	hand(player2, 2, originalColor);
+	deck = resizeDeck(deck, 11, deckSize, deckSize, true);
 	printDeck(deck, deckSize, originalColor);
 }
