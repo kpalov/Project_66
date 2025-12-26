@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+constexpr int DECK_SIZE = 24;
 enum CardValue
 {
 	Ace = 11,
@@ -105,7 +106,74 @@ void printValue(CardValue value)
 		std::cout << "Q";
 	}
 }
+void fillDeck(Card* deck, size_t deckSize)
+{
+	if (!deck) {
+		return;
+	}
+	for (size_t i = 0, j = 9; i < deckSize; i++, j++)
+	{
+		if (j == 15) {
+			j = 9;
+		}
+		switch (j) {
+		case 9: deck[i].value = CardValue::Nine; break;
+		case 10: deck[i].value = CardValue::Ten; break;
+		case 11: deck[i].value = CardValue::Jack; break;
+		case 12: deck[i].value = CardValue::Queen; break;
+		case 13: deck[i].value = CardValue::King; break;
+		case 14: deck[i].value = CardValue::Ace;
+		}
+		if (i < 6) {
+			deck[i].suit = CardSuit::Spades;
+		}
+		else if (i < 12) {
+			deck[i].suit = CardSuit::Hearts;
+		}
+		else if (i < 18) {
+			deck[i].suit = CardSuit::Diamonds;
+		}
+		else {
+			deck[i].suit = CardSuit::Clubs;
+		}
+	}
+}
+void cardSwap(Card& card1, Card& card2)
+{
+	Card temp = card1;
+	card1 = card2;
+	card2 = temp;
+}
+void shuffleDeck(Card* deck, size_t deckSize)
+{
+	if (!deck) {
+		return;
+	}
+	srand(time(nullptr));
+	for (size_t i = 0; i < deckSize; i++)
+	{
+		size_t randomNum = i + (rand() % (deckSize - i));
+		cardSwap(deck[i], deck[randomNum]);
+	}
+}
+void printDeck(Card* deck, size_t deckSize, WORD originalColor) // used only for testing
+{
+	if (!deck) {
+		return;
+	}
+	for (size_t i = 0; i < deckSize; i++)
+	{
+		printValue(deck[i].value);
+		printSuit(deck[i].suit, originalColor);
+		std::cout << std::endl;
+	}
+}
 int main()
 {
-    
+	WORD originalColor = getCurrentConsoleColor();
+	Card* deck = new Card[DECK_SIZE];
+	size_t deckSize = DECK_SIZE;
+	fillDeck(deck, deckSize);
+	shuffleDeck(deck, deckSize);
+	printDeck(deck, deckSize, originalColor);
 }
