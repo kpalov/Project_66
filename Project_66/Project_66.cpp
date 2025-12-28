@@ -1,3 +1,4 @@
+#define NOMINMAX
 #include <iostream>
 #include <windows.h>
 #include <cstdlib>
@@ -5,7 +6,7 @@
 #include <fstream>
 constexpr int DECK_SIZE = 24;
 constexpr int CARDS_IN_HAND = 6;
-
+constexpr int BUFFER = 100;
 enum CardValue
 {
 	Ace = 11,
@@ -67,6 +68,117 @@ void setColor(Color color) {
 }
 void resetColor(WORD originalColor) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), originalColor);
+}
+size_t pow(size_t num, size_t power)
+{
+	size_t result = 1;
+	for (size_t i = 0; i < power; i++)
+	{
+		result *= num;
+	}
+	return result;
+}
+int strcomp(const char* str1, const char* str2)
+{
+	for (size_t i = 0; str1[i]; i++)
+	{
+		if (str1[i] < str2[i]) return 1;
+		else if (str1[i] > str2[i]) return -1;
+	}
+	return 0;
+}
+bool isUpperCase(char ch)
+{
+	return (ch >= 'A' && ch <= 'Z');
+}
+void toLowerCase(char* str)
+{
+	if (!str) {
+		return;
+	}
+	for (size_t i = 0; str[i]; i++)
+	{
+		if (isUpperCase(str[i])) {
+			str[i] = (str[i] - 'A') + 'a';
+		}
+	}
+}
+size_t strlen(char* str)
+{
+	if (!str) {
+		return 0;
+	}
+	size_t count = 0;
+	for (size_t i = 0; str[i]; i++)
+	{
+		count++;
+	}
+	return count;
+}
+size_t charToNumber(char ch)
+{
+	return ch - '0';
+}
+size_t stringToNumber(char* str) {
+	size_t size = strlen(str);
+	size_t num = 0;
+	for (size_t i = size - 1, power = 0; power < size; i--, power++)
+	{
+		num += pow(10, power) * charToNumber(str[i]);
+	}
+	return num;
+}
+bool isNumber(char* str)
+{
+	if (!str) {
+		return false;
+	}
+	for (size_t i = 0; str[i]; i++)
+	{
+		if (str[i] < '0' || str[i] > '9') return false;
+	}
+	return true;
+}
+void trim(char* input)
+{
+	if (!input || input[0] == '\0') {
+		return;
+	}
+	bool seenSpace = true;
+	size_t pos = 0;
+	for (size_t i = 0; input[i]; i++)
+	{
+		if (input[i] != ' ' && input[i] != '\t') {
+			seenSpace = false;
+			input[pos++] = input[i];
+		}
+		else if (input[i] == ' ' && !seenSpace) {
+			seenSpace = true;
+			input[pos++] = ' ';
+		}
+		if (input[i + 1] == '\0') {
+			input[pos] = '\0';
+		}
+	}
+	if (input[pos - 1] == ' ') {
+		input[pos - 1] = '\0';
+	}
+}
+void formatUserInput(char* input)
+{
+	if (!input) {
+		return;
+	}
+	trim(input);
+	toLowerCase(input);
+}
+void userInput(char* input)
+{
+	std::cin.getline(input, BUFFER);
+	if (std::cin.fail()) {
+		std::cin.clear();
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
 }
 void printSuit(CardSuit suit, WORD originalColor)
 {
@@ -281,14 +393,18 @@ int main()
 	player1.deck = new Card[CARDS_IN_HAND];
 	player2.deck = new Card[CARDS_IN_HAND];
 	size_t deckSize = DECK_SIZE;
-	fillDeck(deck, deckSize);
-	shuffleDeck(deck, deckSize);
+	//fillDeck(deck, deckSize);
+	//shuffleDeck(deck, deckSize);
 	//printDeck(deck, deckSize, originalColor);
-	startingDeal(12, deck, player1, player2);
-	orderHand(player1.deck, player1.cardsInHand);
-	orderHand(player2.deck, player2.cardsInHand);
-	hand(player1, 1, originalColor);
-	hand(player2, 2, originalColor);
-	deck = resizeDeck(deck, 11, deckSize, deckSize, true);
-	printDeck(deck, deckSize, originalColor);
+	//startingDeal(12, deck, player1, player2);
+	//orderHand(player1.deck, player1.cardsInHand);
+	//orderHand(player2.deck, player2.cardsInHand);
+	//hand(player1, 1, originalColor);
+	//hand(player2, 2, originalColor);
+	//deck = resizeDeck(deck, 11, deckSize, deckSize, true);
+	//printDeck(deck, deckSize, originalColor);
+	char* input = new char[BUFFER];
+	userInput(input);
+	formatUserInput(input);
+	std::cout << input;
 }
