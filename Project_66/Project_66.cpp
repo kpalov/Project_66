@@ -54,6 +54,14 @@ struct Player
 	size_t roundPoints = 0;
 	size_t cardsInHand = 0;
 };
+struct GameSettings
+{
+	size_t targetPoints = 11;
+	size_t nonTrumpMarriage = 20;
+	size_t trumpMarriage = 40;
+	bool showPoints = true;
+	bool lastTrick = true;
+};
 WORD getCurrentConsoleColor()
 {
 	CONSOLE_SCREEN_BUFFER_INFO info;
@@ -128,7 +136,7 @@ size_t stringToNumber(char* str) {
 	}
 	return num;
 }
-bool isNumber(char* str)
+bool isStringANumber(char* str)
 {
 	if (!str) {
 		return false;
@@ -138,6 +146,10 @@ bool isNumber(char* str)
 		if (str[i] < '0' || str[i] > '9') return false;
 	}
 	return true;
+}
+bool isCharANumber(char ch)
+{
+	return ch >= '0' && ch <= '9';
 }
 void trim(char* input)
 {
@@ -354,36 +366,126 @@ void hand(Player player, size_t playerInTurn, WORD originalColor)
 		}
 	}
 }
-Card* resizeDeck(Card* deck, size_t beg, size_t end, size_t& deckSize, bool sendFirstToBack = false)
+size_t changeFirstSetting(char* input)
 {
-	if (!deck) {
-		return nullptr;
-	}
-	if (beg > end) {
-		return nullptr;
-	}
-	deckSize = end - (beg + 1);
-	if (deckSize == 0) {
-		delete[] deck;
-		return nullptr;
-	}
-	Card* resizedDeck = new Card[deckSize];
-	if (sendFirstToBack) {
-		for (size_t i = beg + 1, j = 0; j < deckSize; i++, j++)
-		{
-			resizedDeck[j] = deck[i];
+	while (true) {
+		std::cout << "Enter new target points to win within range [5-20]" << std::endl;
+		userInput(input);
+		formatUserInput(input);
+		if (isStringANumber(input)) {
+			if (stringToNumber(input) <= 5 || stringToNumber(input) >= 20) {
+				std::cout << "Input out of bounds. Please try again." << std::endl;
+			}
+			else {
+				return stringToNumber(input);
+			}
 		}
-		resizedDeck[deckSize - 1] = deck[beg];
+		else {
+			std::cout << "Incorrect input. Please try again." << std::endl;
+		}
+	}
+}
+size_t changeSecondSetting(char* input)
+{
+	while (true) {
+		std::cout << "Enter new non-trump marriage points within range [5-40]" << std::endl;
+		userInput(input);
+		formatUserInput(input);
+		if (isStringANumber(input)) {
+			if (stringToNumber(input) <= 5 || stringToNumber(input) >= 40) {
+				std::cout << "Input out of bounds. Please try again." << std::endl;
+			}
+			else {
+				return stringToNumber(input);
+			}
+		}
+		else {
+			std::cout << "Incorrect input. Please try again." << std::endl;
+		}
+	}
+}
+size_t changeThirdSetting(char* input)
+{
+	while (true) {
+		std::cout << "Enter new trump marriage points within range [20-60]" << std::endl;
+		userInput(input);
+		formatUserInput(input);
+		if (isStringANumber(input)) {
+			if (stringToNumber(input) <= 20 || stringToNumber(input) >= 60) {
+				std::cout << "Input out of bounds. Please try again." << std::endl;
+			}
+			else {
+				return stringToNumber(input);
+			}
+		}
+		else {
+			std::cout << "Incorrect input. Please try again." << std::endl;
+		}
+	}
+}
+void settings(GameSettings settings, char* input)
+{
+	std::cout << "Santase (66)" << std::endl;
+	std::cout << "1) Target points to win[" << settings.showPoints << "]" << std::endl;
+	std::cout << "2) Non-Trump marriage points [" << settings.nonTrumpMarriage << "]" << std::endl;
+	std::cout << "3) Trump marriage points [" << settings.trumpMarriage << "]" << std::endl;
+	if (settings.showPoints) {
+		std::cout << "4) Show players' points [on]" << std::endl;
 	}
 	else {
-		for (size_t i = beg, j = 0; j < deckSize; i++, j++)
-		{
-			resizedDeck[j] = deck[i];
+		std::cout << "4) Show players' points [off]" << std::endl;
+	}
+	if (settings.lastTrick) {
+		std::cout << "5) Last trick +10 [on]" << std::endl;
+	}
+	else {
+		std::cout << "5) Last trick +10 [off]" << std::endl;
+	}
+	while (true) {
+		std::cout << "Enter number to change or 'back' to return:" << std::endl;
+		userInput(input);
+		formatUserInput(input);
+		if (!strcomp(input, "1")) {
+			settings.showPoints = changeFirstSetting(input);
+			std::cout << "Target points successfully changed to " << settings.showPoints << std::endl;
+		}
+		else if (!strcomp(input, "2")) {
+			settings.nonTrumpMarriage = changeSecondSetting(input);
+			std::cout << "Non-trump marriage points successfully changed to " << settings.nonTrumpMarriage << std::endl;
+		}
+		else if (!strcomp(input, "3")) {
+			settings.trumpMarriage = changeThirdSetting(input);
+			std::cout << "Trump marriage points successfully changed to " << settings.trumpMarriage << std::endl;
+		}
+		else if (!strcomp(input, "4")) {
+			if (settings.showPoints) {
+				settings.showPoints = false;
+				std::cout << "Showing players' points is switched off" << std::endl;
+			}
+			else {
+				settings.showPoints = true;
+				std::cout << "Showing players' points is switched on" << std::endl;
+			}
+		}
+		else if (!strcomp(input, "5")) {
+			if (settings.lastTrick) {
+				settings.lastTrick = false;
+				std::cout << "Last trick is switched off" << std::endl;
+			}
+			else {
+				settings.lastTrick = true;
+				std::cout << "Last trick is switched on" << std::endl;
+			}
+		}
+		else if (!strcomp(input, "back")) {
+			break;
+		}
+		else {
+			continue;
 		}
 	}
-	delete[] deck;
-	return resizedDeck;
 }
+
 int main()
 {
 	SetConsoleOutputCP(CP_UTF8);
