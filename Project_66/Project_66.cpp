@@ -7,6 +7,7 @@
 constexpr int DECK_SIZE = 24;
 constexpr int CARDS_IN_HAND = 6;
 constexpr int BUFFER = 100;
+constexpr int MAX_ROUNDS = 100;
 enum CardValue
 {
 	Ace = 11,
@@ -85,7 +86,9 @@ struct GameHistory
 {
 	size_t player1RoundPoints = 0;
 	size_t player2RoundPoints = 0;
+	size_t earnedPoints = 0;
 	bool winner;
+	bool tied = false;
 };
 struct Deck
 {
@@ -419,7 +422,7 @@ void hand(Player player, RoundState state, WORD originalColor)
 	}
 	std::cout << std::endl;
 }
-void startingDeal(Player player[2], Deck& deck)
+void startingDeal(Player player[], Deck& deck)
 {
 	constexpr int NUMBER_OF_DEALED_CARDS = 12;
 	for (size_t i = 0, pos1 = 0, pos2 = 0; i < NUMBER_OF_DEALED_CARDS; i++)
@@ -759,7 +762,7 @@ void marriage(Player& player, GameSettings settings, RoundState& state, char* in
 		return;
 	}
 }
-void status(Deck deck, Player player[2], RoundState state, GameSettings settings, WORD originalColor)
+void status(Deck deck, Player player[], RoundState state, GameSettings settings, WORD originalColor)
 {
 	if (settings.showPoints) {
 		std::cout << "Player 1: " << player[0].gamePoints << " game points" << std::endl;
@@ -775,15 +778,31 @@ void status(Deck deck, Player player[2], RoundState state, GameSettings settings
 	std::cout << std::endl;
 	hand(player[state.playerInTurn], state, originalColor);
 }
-void history(GameHistory* gameHistory, Player player[2]) // da se dovurshi
+void history(GameHistory gameHistory[], int numberOfRounds, Player player[2])
 {
-
+	if (!numberOfRounds) {
+		std::cout << "Round 1: Ongoing" << std::endl;
+		std::cout << "Overall: Player 1 - " << player[0].gamePoints << " | Player 2 - " << player[1].gamePoints << std::endl;
+		return;
+	}
+	for (size_t i = 0; i < numberOfRounds; i++)
+	{
+		if (gameHistory[i].tied) {
+			std::cout << "Round " << (i + 1) << ": Tied game! | Player 1:" << gameHistory[i].player1RoundPoints 
+				<< " points | Player 2: " << gameHistory[i].player2RoundPoints << " points"
+				<< std::endl;
+		}
+		std::cout << "Round " << (i + 1) << ":" << " Winner - Player " << (int)gameHistory[i].winner + 1 << "(+" << gameHistory[i].earnedPoints
+			<< ") | Player 1: " << gameHistory[i].player1RoundPoints << " points | Player 2: " << gameHistory[i].player2RoundPoints << " points"
+			<< std::endl;
+	}
+	std::cout << "Overall: Player 1 - " << player[0].gamePoints << " | Player 2 - " << player[1].gamePoints << std::endl;
 }
 void rules(GameSettings gameSettings)
 {
 
 }
-void draw(Player player[2], Deck& deck, RoundState state)
+void draw(Player player[], Deck& deck, RoundState state)
 {
 	player[0].cardsInHand++;
 	player[1].cardsInHand++;
@@ -864,7 +883,7 @@ bool play(Player& player, RoundState& state, Trick& currentTrick, char* input, W
 	player.cardsInHand--;
 	return true;
 }
-void round(Deck& deck, Player player[2], GameSettings settings, RoundState& state, GameHistory* gameHistory, char* input, WORD originalColor)
+void round(Deck& deck, Player player[], GameSettings settings, RoundState& state, GameHistory gameHistory[], int numberOfRounds, char* input, WORD originalColor)
 {
 	Trick currentTrick, last;
 	while (true) {
@@ -912,6 +931,10 @@ void round(Deck& deck, Player player[2], GameSettings settings, RoundState& stat
 				marriage(player[state.playerInTurn], settings, state, input, originalColor);
 				continue;
 			}
+			else if (!strcomp(input, "history")) {
+				history(gameHistory, numberOfRounds, player);
+				continue;
+			}
 			else if (!strcomp(input, "stop")) {
 				if (state.firstPlayer != state.playerInTurn) {
 					std::cout << "You cannot stop now you have to be first!" << std::endl;
@@ -937,7 +960,7 @@ void round(Deck& deck, Player player[2], GameSettings settings, RoundState& stat
 				std::cout << "Incorrect input. Try again." << std::endl;
 			}
 		}
-		if (!strcomp(input, "stop") || !strcomp(input, "exit")) {
+		if (!strcomp(input, "stop") || !strcomp(input, "exit") || !strcomp(input, "surrender") || !strcomp(input, "surrender-forever")) {
 			break;
 		}
 		else if (state.playerInTurn != state.firstPlayer) {
@@ -948,9 +971,9 @@ void round(Deck& deck, Player player[2], GameSettings settings, RoundState& stat
 				last.winner = state.playerInTurn;
 				state.playerInTurn = last.winner;
 				state.firstPlayer = last.winner;
-				if (!state.strictRules) {
-					draw(player, deck, state);
-				}
+					if (!state.strictRules) {
+						draw(player, deck, state);
+					}
 			}
 			else {
 				player[state.firstPlayer].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
@@ -979,12 +1002,11 @@ void round(Deck& deck, Player player[2], GameSettings settings, RoundState& stat
 		}
 	}
 }
-void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state, GameHistory* gameHistory, char* input, WORD originalColor)
+void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state, GameHistory* gameHistory, int numberOfRounds, char* input, WORD originalColor)
 {
 	std::cout << "Game started!" << std::endl;
-	resetRound(player, state, deck, originalColor);
 	do {
-		round(deck, player, settings, state, gameHistory, input, originalColor);
+		round(deck, player, settings, state, gameHistory, numberOfRounds, input, originalColor);
 		if (!strcomp(input, "exit")) {
 			break;
 		}
@@ -993,12 +1015,18 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 			std::cout << "Player" << (int)!state.playerInTurn + 1 << " won the round!";
 			if (player[state.playerInTurn].roundPoints == 0) {
 				player[!state.playerInTurn].gamePoints += 3;
+				gameHistory[numberOfRounds].earnedPoints = 3;
 				std::cout << "(+3)" << std::endl;
 			}
 			else {
 				player[!state.playerInTurn].gamePoints += 2;
+				gameHistory[numberOfRounds].earnedPoints = 2;
 				std::cout << "(+2)" << std::endl;
 			}
+			gameHistory[numberOfRounds].winner = !state.playerInTurn;
+			gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+			gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+			numberOfRounds++;
 		}
 		else if (!strcomp(input, "surrender-forever")) {
 			std::cout << "Player" << (int)state.playerInTurn + 1 << " surrendered the game." << std::endl;
@@ -1010,30 +1038,43 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 				std::cout << "Player " << (int)state.firstPlayer + 1 << " won the round!" << std::endl;
 				if (player[!state.firstPlayer].roundPoints >= 33) {
 					player[state.firstPlayer].gamePoints += 1;
+					gameHistory[numberOfRounds].earnedPoints = 1;
 					std::cout << "(+1)" << std::endl;
 				}
 				else if (player[!state.firstPlayer].roundPoints == 0) {
 					player[state.firstPlayer].gamePoints += 3;
+					gameHistory[numberOfRounds].earnedPoints = 3;
 					std::cout << "(+3)" << std::endl;
 				}
 				else {
 					player[state.firstPlayer].gamePoints += 2;
+					gameHistory[numberOfRounds].earnedPoints = 2;
 					std::cout << "(+2)" << std::endl;
 				}
 				state.playerInTurn = state.firstPlayer;
+				gameHistory[numberOfRounds].winner = state.firstPlayer;
+				gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+				gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+				numberOfRounds++;
 			}
 			else {
 				std::cout << "Player " << (int)(!state.firstPlayer) + 1 << " won the round!" << std::endl;
 				if (player[state.firstPlayer].roundPoints == 0) {
 					player[!state.firstPlayer].gamePoints += 3;
+					gameHistory[numberOfRounds].earnedPoints = 3;
 					std::cout << "(+3)" << std::endl;
 				}
 				else {
 					player[!state.firstPlayer].gamePoints += 2;
+					gameHistory[numberOfRounds].earnedPoints = 2;
 					std::cout << "(+2)" << std::endl;
 				}
 				state.firstPlayer = !state.firstPlayer;
 				state.playerInTurn = state.firstPlayer;
+				gameHistory[numberOfRounds].winner = !state.firstPlayer;
+				gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+				gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+				numberOfRounds++;
 			}
 		}
 		else {
@@ -1041,39 +1082,57 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 				std::cout << "Tied round!" << std::endl;
 				state.firstPlayer = 0;
 				state.playerInTurn = state.firstPlayer;
+				gameHistory[numberOfRounds].tied = true;
+				gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+				gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+				numberOfRounds++;
 			}
 			else if (player[state.firstPlayer].roundPoints > player[!state.firstPlayer].roundPoints) {
 				std::cout << "Player " << (int)state.firstPlayer + 1 << " won the round!" << std::endl;
 				if (player[!state.firstPlayer].roundPoints >= 33) {
 					player[state.firstPlayer].gamePoints += 1;
+					gameHistory[numberOfRounds].earnedPoints = 1;
 					std::cout << "(+1)" << std::endl;
 				}
 				else if (player[!state.firstPlayer].roundPoints == 0) {
 					player[state.firstPlayer].gamePoints += 3;
+					gameHistory[numberOfRounds].earnedPoints = 3;
 					std::cout << "(+3)" << std::endl;
 				}
 				else {
 					player[state.firstPlayer].gamePoints += 2;
+					gameHistory[numberOfRounds].earnedPoints = 2;
 					std::cout << "(+2)" << std::endl;
 				}
 				state.playerInTurn = state.firstPlayer;
+				gameHistory[numberOfRounds].winner = state.firstPlayer;
+				gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+				gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+				numberOfRounds++;
 			}
 			else {
 				std::cout << "Player " << (int)(!state.firstPlayer) + 1 << " won the round!" << std::endl;
 				if (player[state.firstPlayer].roundPoints >= 33) {
 					player[!state.firstPlayer].gamePoints += 1;
+					gameHistory[numberOfRounds].earnedPoints = 1;
 					std::cout << "(+1)" << std::endl;
 				}
 				else if (player[state.firstPlayer].roundPoints == 0) {
 					player[!state.firstPlayer].gamePoints += 3;
+					gameHistory[numberOfRounds].earnedPoints = 3;
 					std::cout << "(+3)" << std::endl;
 				}
 				else {
 					player[!state.firstPlayer].gamePoints += 2;
+					gameHistory[numberOfRounds].earnedPoints = 2;
 					std::cout << "(+2)" << std::endl;
 				}
 				state.firstPlayer = !state.firstPlayer;
 				state.playerInTurn = state.firstPlayer;
+				gameHistory[numberOfRounds].winner = state.firstPlayer;
+				gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
+				gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
+				numberOfRounds++;
 			}
 		}
 		if (player[0].gamePoints >= 11) {
@@ -1082,6 +1141,16 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 		}
 		else if (player[1].gamePoints >= 11) {
 			std::cout << "Player 2 wins the game!" << std::endl;
+			break;
+		}
+		else if (numberOfRounds == MAX_ROUNDS) {
+			std::cout << "You have defined all odds and have played 100 rounds! Can you believe it! Let's call it a day and end the game." << std::endl;
+			if (player[0].gamePoints > player[1].gamePoints) {
+				std::cout << "Player 1 wins the game!" << std::endl;
+			}
+			else {
+				std::cout << "Player 2 wins the game!" << std::endl;
+			}
 			break;
 		}
 		resetRound(player, state, deck, originalColor);
@@ -1097,7 +1166,8 @@ int main()
 	GameSettings gameSettings;
 	RoundState state;
 	Deck deck;
-	GameHistory* gameHistory = nullptr;
+	GameHistory gameHistory[MAX_ROUNDS];
+	int numberOfRounds = 0;
 	do {
 		std::cout << "Santase(66)" << std::endl;
 		std::cout << "To start game enter 'start'." << std::endl;
@@ -1105,10 +1175,24 @@ int main()
 		std::cout << "To change the settings of the game enter 'settings'." << std::endl;
 		std::cout << "To exit application enter 'exit'" << std::endl;
 		userInput(input);
+		if (strContains(input, "load")) {
+
+		}
+		else if (strContains(input, "save")) {
+			if (!player[0].gamePoints || !player[1].gamePoints) {
+				std::cout << "No game in memmory to save!" << std::endl;
+			}
+			else {
+
+			}
+		}
 		formatUserInput(input);
 		if (!strcomp(input, "start")) {
 			startedGame = true;
-			game(deck, player, gameSettings, state, gameHistory, input, originalColor);
+			resetRound(player, state, deck, originalColor);
+			player[0].gamePoints = 0;
+			player[1].gamePoints = 0;
+			game(deck, player, gameSettings, state, gameHistory, numberOfRounds, input, originalColor);
 		}
 		else if (!strcomp(input, "settings") && !startedGame) {
 			settings(gameSettings, input);
@@ -1116,14 +1200,9 @@ int main()
 		else if (!strcomp(input, "rules")) {
 
 		}
-		else if (strContains(input, "save")) {
-			std::cout << "Cannot save now the game hasn't started yet.";
-		}
-		else if (strContains(input, "load")) {
-
-		}
 		if (!strcomp(input, "exit")) {
 			return 0;
 		}
 	} while (true);
+	delete[] input;
 }
