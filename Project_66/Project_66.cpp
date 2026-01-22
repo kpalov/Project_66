@@ -73,8 +73,8 @@ struct Trick
 };
 struct RoundState
 {
-	CardSuit marriageSuit;
-	CardSuit trump;
+	CardSuit marriageSuit = Spades;
+	CardSuit trump = Spades;
 	bool strictRules = false;
 	bool playerInTurn = false;
 	bool firstPlayer = false;
@@ -149,12 +149,12 @@ size_t pow(size_t num, size_t power)
 	}
 	return result;
 }
-size_t strlen(char* str)
+int strlen(char* str)
 {
 	if (!str) {
 		return 0;
 	}
-	size_t count = 0;
+	int count = 0;
 	for (size_t i = 0; str[i]; i++)
 	{
 		count++;
@@ -180,7 +180,7 @@ bool strContains(const char* str1, const char* str2)
 	if (size2 > size1) {
 		return false;
 	}
-	for (size_t i = 0; i < size1 - size2; i++)
+	for (size_t i = 0; i <= size1 - size2; i++)
 	{
 		for (size_t pos1 = 0, pos2 = i; pos1 < size2; pos1++, pos2++)
 		{
@@ -514,7 +514,7 @@ size_t changeThirdSetting(char* input)
 void settings(GameSettings settings, char* input)
 {
 	std::cout << "Santase (66)" << std::endl;
-	std::cout << "1) Target points to win[" << settings.showPoints << "]" << std::endl;
+	std::cout << "1) Target points to win[" << settings.targetPoints << "]" << std::endl;
 	std::cout << "2) Non-Trump marriage points [" << settings.nonTrumpMarriage << "]" << std::endl;
 	std::cout << "3) Trump marriage points [" << settings.trumpMarriage << "]" << std::endl;
 	if (settings.showPoints) {
@@ -534,7 +534,7 @@ void settings(GameSettings settings, char* input)
 		userInput(input);
 		formatUserInput(input);
 		if (!strcomp(input, "1")) {
-			settings.showPoints = changeFirstSetting(input);
+			settings.targetPoints = changeFirstSetting(input);
 			std::cout << "Target points successfully changed to " << settings.showPoints << std::endl;
 		}
 		else if (!strcomp(input, "2")) {
@@ -574,39 +574,78 @@ void settings(GameSettings settings, char* input)
 	}
 }
 bool checkStrictRules(Player player, size_t playedIndex, RoundState state, Trick currentTrick) {
-	if (isSuitsEqual(player.hand[playedIndex].suit, currentTrick.player1.suit)) {
-		return true;
-	}
-	else if (isSuitsEqual(player.hand[playedIndex].suit, state.trump)) {
-		if (isSuitInHand(player, currentTrick.player1.suit)) {
-			return false;
-		}
-		else {
+	if (!currentTrick.firstPlayer) {
+		if (isSuitsEqual(player.hand[playedIndex].suit, currentTrick.player1.suit)) {
 			return true;
 		}
+		else if (isSuitInHand(player, currentTrick.player1.suit)) {
+			std::cout << "You must play the exact suit or the trump suit!" << std::endl;
+			return false;
+		}
+		else if (isSuitsEqual(player.hand[playedIndex].suit, state.trump)) {
+			return true;
+		}
+		else if (isSuitInHand(player, state.trump)) {
+			std::cout << "You must play the exact suit or the trump suit!" << std::endl;
+			return false;
+		}
 	}
-	else if (isSuitInHand(player, state.trump)) {
-		return false;
+	else {
+		if (isSuitsEqual(player.hand[playedIndex].suit, currentTrick.player2.suit)) {
+			return true;
+		}
+		else if (isSuitInHand(player, currentTrick.player2.suit)) {
+			std::cout << "You must play the exact suit or the trump suit!" << std::endl;
+			return false;
+		}
+		else if (isSuitsEqual(player.hand[playedIndex].suit, state.trump)) {
+			return true;
+		}
+		else if (isSuitInHand(player, state.trump)) {
+			std::cout << "You must play the exact suit or the trump suit!" << std::endl;
+			return false;
+		}
 	}
 	return true;
 }
 int cardComp(Card card1, Card card2, RoundState state) {
-	if (card1.suit != card2.suit) {
-		if (card2.suit == state.trump) {
-			return 1;
+	if (!state.firstPlayer) {
+		if (card1.suit != card2.suit) {
+			if (card2.suit == state.trump) {
+				return 1;
+			}
+			else {
+				return -1;
+			}
 		}
 		else {
-			return -1;
+			if (card1.value > card2.value) {
+				return -1;
+			}
+			else {
+				return 1;
+			}
 		}
 	}
 	else {
-		if (card1.value > card2.value) {
-			return -1;
+		if (card1.suit != card2.suit) {
+			if (card1.suit == state.trump) {
+				return -1;
+			}
+			else {
+				return 1;
+			}
 		}
 		else {
-			return 1;
+			if (card1.value > card2.value) {
+				return -1;
+			}
+			else {
+				return 1;
+			}
 		}
 	}
+
 }
 size_t cardIndex(Player player, Card card) {
 	for (size_t i = 0; i < player.cardsInHand; i++)
@@ -788,7 +827,7 @@ void history(GameHistory gameHistory[], int numberOfRounds, Player player[2])
 	for (size_t i = 0; i < numberOfRounds; i++)
 	{
 		if (gameHistory[i].tied) {
-			std::cout << "Round " << (i + 1) << ": Tied game! | Player 1:" << gameHistory[i].player1RoundPoints 
+			std::cout << "Round " << (i + 1) << ": Tied game! | Player 1:" << gameHistory[i].player1RoundPoints
 				<< " points | Player 2: " << gameHistory[i].player2RoundPoints << " points"
 				<< std::endl;
 		}
@@ -798,9 +837,356 @@ void history(GameHistory gameHistory[], int numberOfRounds, Player player[2])
 	}
 	std::cout << "Overall: Player 1 - " << player[0].gamePoints << " | Player 2 - " << player[1].gamePoints << std::endl;
 }
-void rules(GameSettings gameSettings)
+void rules()
 {
+	std::cout << "Santase (66)" << std::endl
+		<< "Each player gets 6 cards. After the initial deal the top card is flipped and put at the bottom of the deck." << std::endl
+		<< "This is card shows the trump suit." << std::endl
+		<< "Card values: A=11, 10=10, K=4, Q=3, J=2, 9=0." << std::endl
+		<< "A marriage (K+Q of the same suit) gives 20 points, or 40 if the trump suit."
+		<< "(These values can be changed in the settings menu before the game starts)" << std::endl
+		<< "These are the functions a player can call in this game:" << std::endl
+		<< "Warning!!! These functions are called only when the input is in correct form!!!" << std::endl
+		<< "Settings - This function let's the player modify some settings of the game before its start" << std::endl
+		<< "Start - Starts a new game" << std::endl
+		<< "Player [Index 0-5] - Let's the player in turn play the desired card from their hand" << std::endl
+		<< "Hand - Lets the player in turn see their hand" << std::endl
+		<< "Status: Gives a detail description of the game's status (round and game points, trump suit, ect.)" << std::endl
+		<< "Switch-nine - Lets the player in turn switch trump nine from his hand with the bottom card" << std::endl
+		<< "Trump - Prints the trump suit" << std::endl
+		<< "Last-trick - Shows the last played trick" << std::endl
+		<< "Marriage [first letter of suit] - Lets a player who has won at least one trick and is first to declare marriage" << std::endl
+		<< "History - Gives information about previous rounds" << std::endl
+		<< "Close - Closes the deck and enforces strict rules" << std::endl
+		<< "Stop - If a player thinks that he has 66 points he can stop the round, game points are calculated and a new round is started"
+		<< std::endl
+		<< "Surrender - The player in turn surrenders the round and the other player wins the round" << std::endl
+		<< "Surrender-forever - The player in turn surrenders the game and the other player wins" << std::endl
+		<< "Save [file name] - Saves the game to a text file "
+		<< "(Warning if you try to save a game to an already existing game file the old data will be lost!)" << std::endl
+		<< "Load [file name] - Load a saved game from a text file"
+		<< "(Warning this function works only with saved file created by the save function listed above!!!)" << std::endl
+		<< "Strict rules: The secondd player must answer the suit that the first player has played if he has it." << std::endl
+		<< "If he doesn't have it he must play a trump card and if he doesn't have that either he is free to play whatever." << std::endl
+		<< "Important note: At the start of a new game the person who won the previous game starts first." << std::endl;
+}
+void subStrForFiles(char* input, int start, int end)
+{
+	int pos = 0;
+	for (int i = start; i < end; i++)
+	{
+		input[pos++] = input[i];
+		if (i == end - 1) {
+			input[pos] = '\0';
+		}
+	}
+	input[pos++] = '.';
+	input[pos++] = 't';
+	input[pos++] = 'x';
+	input[pos++] = 't';
+	input[pos] = '\0';
 
+}
+size_t numberSubStr(char* str)
+{
+	int pos = 0;
+	for (size_t i = 0; str[i]; i++)
+	{
+		if (isCharANumber(str[i])) {
+			str[pos++] = str[i];
+		}
+	}
+	str[pos] = '\0';
+	return stringToNumber(str);
+}
+void writeSuit(CardSuit suit, std::ofstream& file)
+{
+	if (suit == CardSuit::Spades) {
+		file << "S";
+	}
+	else if (suit == CardSuit::Hearts) {
+		file << "H";
+	}
+	else if (suit == CardSuit::Diamonds) {
+		file << "D";
+	}
+	else {
+		file << "C";
+	}
+}
+void writeValue(CardValue value, std::ofstream& file)
+{
+	if (value == Ace) {
+		file << "A";
+	}
+	else if (value == Ten) {
+		file << "1"; // it is easier to read if it is single digit number
+	}
+	else if (value == Nine) {
+		file << "9";
+	}
+	else if (value == Jack) {
+		file << "J";
+	}
+	else if (value == King) {
+		file << "K";
+	}
+	else if (value == Queen) {
+		file << "Q";
+	}
+}
+void save(Deck deck, Player player[], GameSettings gameSettings, RoundState state, GameHistory gameHistory[], Trick last, int numberOfRounds, char* input)
+{
+	if (strlen(input) <= 5) { // the correct input for save function call is save [nameOfFile] which has at least more than 5 characters including the whitespace
+		std::cout << "Incorrect file name" << std::endl;
+		return;
+	}
+	subStrForFiles(input, 5, strlen(input));
+	std::ofstream file;
+	file.open(input);
+	if (!file) {
+		std::cout << "File could not be opened. Try again";
+		return;
+	}
+	file << "Rounds_played " << numberOfRounds << std::endl;
+	file << "Settings" << std::endl;
+	file << "Target_points " << gameSettings.targetPoints << std::endl;
+	file << "Trump_marriage " << gameSettings.trumpMarriage << std::endl;
+	file << "Non_trump_marriage " << gameSettings.nonTrumpMarriage << std::endl;
+	file << "Last_trick " << gameSettings.lastTrick << std::endl;
+	file << "Show_points " << gameSettings.showPoints << std::endl << std::endl;
+
+	file << "Round_state" << std::endl;
+	file << "Player_in_turn " << (int)state.playerInTurn << std::endl;
+	file << "First_player " << (int)state.firstPlayer << std::endl;
+	file << "Is_first_trick " << (int)state.isFirstTrick << std::endl;
+	file << "Strict_rules " << (int)state.strictRules << std::endl;
+	file << "Announced_marriage " << (int)state.announceMarriage << std::endl;
+	file << "Marriage_suit ";
+	writeSuit(state.marriageSuit, file);
+	file << std::endl;
+	file << "Trump: ";
+	writeSuit(state.trump, file);
+	file << std::endl << std::endl;
+	file << "Last_trick: " << std::endl;
+	file << "Player1: ";
+	writeValue(last.player1.value, file);
+	writeSuit(last.player1.suit, file);
+	file << std::endl;
+	file << "Player2: ";
+	writeValue(last.player2.value, file);
+	writeSuit(last.player2.suit, file);
+	file << std::endl;
+	file << "Winner: " << (int)last.winner << std::endl;
+	file << "First_player: " << (int)last.firstPlayer << std::endl;
+	file << std::endl;
+	file << "Players" << std::endl;
+	for (int i = 0; i < 2; i++) {
+		file << "Player " << i << std::endl;
+		file << "Game_points " << player[i].gamePoints << std::endl;
+		file << "Round_points " << player[i].roundPoints << std::endl;
+		file << "Cards_in_hand " << player[i].cardsInHand << std::endl;
+
+		file << "Last_card ";
+		writeValue(player[i].lastCardDrawn.value, file);
+		writeSuit(player[i].lastCardDrawn.suit, file);
+		file << std::endl;
+
+		file << "Hand ";
+		for (int j = 0; j < player[i].cardsInHand; j++) {
+			writeValue(player[i].hand[j].value, file);
+			writeSuit(player[i].hand[j].suit, file);
+			if (j + 1 < player[i].cardsInHand) file << ',';
+		}
+		file << std::endl;
+	}
+
+	file << "Deck " << deck.size << std::endl;
+	file << "Top_card_index " << deck.topCardIndex << std::endl;
+	for (size_t i = deck.topCardIndex; i < DECK_SIZE; i++) {
+		writeValue(deck.deck[i].value, file);
+		writeSuit(deck.deck[i].suit, file);
+		if (i < DECK_SIZE - 1) file << ',';
+	}
+	file << std::endl << std::endl;
+
+	file << "History " << std::endl;
+	for (int i = 0; i < numberOfRounds; i++) {
+		file << "Round " << i << ' '
+			<< "Winner " << (int)gameHistory[i].winner << ' '
+			<< "Earned " << gameHistory[i].earnedPoints << ' '
+			<< "Player1 " << gameHistory[i].player1RoundPoints << ' '
+			<< "Player2 " << gameHistory[i].player2RoundPoints << ' '
+			<< "Tied " << gameHistory[i].tied << std::endl;
+	}
+
+	std::cout << "Game successfully saved to file " << input << std::endl;
+	file.close();
+}
+CardSuit readSuit(std::ifstream& file)
+{
+	char ch;
+	file >> ch;
+	if (ch == ' ' || ch == '\n') {
+		file >> ch;
+	}
+	if (ch == 'S') {
+		return Spades;
+	}
+	else if (ch == 'D') {
+		return Diamonds;
+	}
+	else if (ch == 'H') {
+		return Hearts;
+	}
+	else {
+		return Clubs;
+	}
+}
+CardValue readValue(std::ifstream& file)
+{
+	char ch = file.get();
+	if (ch == ' ' || ch == '\n') {
+		file >> ch;
+	}
+	if (ch == 'A') {
+		return Ace;
+	}
+	else if (ch == 'K') {
+		return King;
+	}
+	else if (ch == 'Q') {
+		return Queen;
+	}
+	else if (ch == '1') {
+		return Ten;
+	}
+	else if (ch == '9') {
+		return Nine;
+	}
+	else {
+		return Jack;
+	}
+}
+Card readCard(std::ifstream& file)
+{
+	Card card;
+	card.value = readValue(file);
+	card.suit = readSuit(file);
+	return card;
+}
+void readHand(Card hand[], size_t cardsInHand, std::ifstream& file)
+{
+	char ch;
+	for (size_t i = 0; i < cardsInHand; i++)
+	{
+		hand[i] = readCard(file);
+		if (i != cardsInHand - 1) {
+			file >> ch;
+		}
+	}
+}
+void readDeck(Deck& deck, std::ifstream& file) 
+{
+	char ch;
+	for (size_t i = deck.topCardIndex; i < DECK_SIZE; i++)
+	{
+		deck.deck[i] = readCard(file);
+		if (i != DECK_SIZE - 1) {
+			file >> ch;
+		}
+	}
+}
+bool load(Deck& deck, Player player[], GameSettings& gameSettings, RoundState& state, GameHistory gameHistory[], Trick& last, int& numberOfRounds, char* input)
+{
+	if (strlen(input) <= 5) { // the correct input for save function call is load [nameOfFile] which has at least more than 5 characters including the whitespace
+		std::cout << "Incorrect file name" << std::endl;
+		return false;
+	}
+	char temp[BUFFER];
+	subStrForFiles(input, 5, strlen(input));
+	std::ifstream file;
+	file.open(input);
+	if (!file) {
+		std::cout << "File could not be opened. Try again";
+		return false;
+	}
+	int num = 0; // reading variable
+	file >> temp >> num;
+	numberOfRounds = num;
+	// settings
+	file >> temp;
+	file >> temp >> num;
+	gameSettings.targetPoints = num;
+	file >> temp >> num;
+	gameSettings.trumpMarriage = num;
+	file >> temp >> num;
+	gameSettings.nonTrumpMarriage = num;
+	file >> temp >> num;
+	gameSettings.lastTrick = (bool)num;
+	file >> temp >> num;
+	gameSettings.showPoints = (bool)num;
+	// state
+	file >> temp;
+	file >> temp >> num;
+	state.playerInTurn = (bool)num;
+	file >> temp >> num;
+	state.firstPlayer = (bool)num;
+	file >> temp >> num;
+	state.isFirstTrick = (bool)num;
+	file >> temp >> num;
+	state.strictRules = (bool)num;
+	file >> temp >> num;
+	state.announceMarriage = (bool)num;
+	file >> temp;
+	state.marriageSuit = readSuit(file);
+	file >> temp;
+	state.trump = readSuit(file);
+	file >> temp; // last trick
+	file >> temp;
+	last.player1 = readCard(file);
+	file >> temp;
+	last.player2 = readCard(file);
+	file >> temp >> num;
+	last.winner = (bool)num;
+	file >> temp >> num;
+	last.firstPlayer = (bool)num;
+
+	file >> temp; // players
+	for (int i = 0; i < 2; i++) {
+		file >> temp >> temp;
+
+		file >> temp >> player[i].gamePoints;
+		file >> temp >> player[i].roundPoints;
+		file >> temp >> player[i].cardsInHand;
+
+		file >> temp;
+		player[i].lastCardDrawn = readCard(file);
+		file >> temp; // hand
+		readHand(player[i].hand, player[i].cardsInHand, file);
+	}
+	// deck
+	file >> temp >> deck.size;
+	file >> temp >> deck.topCardIndex;
+	readDeck(deck, file);
+	// history
+	file >> temp;
+	for (int i = 0; i < numberOfRounds; i++) {
+		file >> temp >> temp;               // Round i
+		file >> temp >> num;
+		gameHistory[i].winner = (bool)num;
+		file >> temp >> num;
+		gameHistory[i].earnedPoints = num;
+		file >> temp >> num;
+		gameHistory[i].player1RoundPoints = num;
+		file >> temp >> num;
+		gameHistory[i].player2RoundPoints = num;
+		file >> temp >> num;
+		gameHistory[i].tied = (bool)num;
+	}
+	file.close();
+	std::cout << "Game loaded from file!" << std::endl;
+	return true;
 }
 void draw(Player player[], Deck& deck, RoundState state)
 {
@@ -810,18 +1196,16 @@ void draw(Player player[], Deck& deck, RoundState state)
 	player[state.firstPlayer].lastCardDrawn = deck.deck[deck.topCardIndex];
 	deck.topCardIndex++;
 	deck.size--;
-	orderHand(player[state.firstPlayer]);
 	player[!state.firstPlayer].hand[player[!state.firstPlayer].cardsInHand - 1] = deck.deck[deck.topCardIndex];
 	player[!state.firstPlayer].lastCardDrawn = deck.deck[deck.topCardIndex];
 	deck.topCardIndex++;
 	deck.size--;
-	orderHand(player[!state.firstPlayer]);
 }
-void resetRound(Player player[2], RoundState& state, Deck& deck, WORD originalColor)
+void resetRound(Player player[], RoundState& state, Deck& deck, WORD originalColor)
 {
 	deck.size = DECK_SIZE;
 	deck.topCardIndex = 0;
-	for (size_t i = 0; i < 1; i++)
+	for (size_t i = 0; i < 2; i++)
 	{
 		player[i].cardsInHand = CARDS_IN_HAND;
 		player[i].roundPoints = 0;
@@ -831,7 +1215,6 @@ void resetRound(Player player[2], RoundState& state, Deck& deck, WORD originalCo
 	fillDeck(deck);
 	shuffleDeck(deck);
 	startingDeal(player, deck);
-	printDeck(deck, originalColor);
 	state.trump = deck.deck[DECK_SIZE - 1].suit;
 	orderHand(player[0]);
 	orderHand(player[1]);
@@ -864,7 +1247,12 @@ bool play(Player& player, RoundState& state, Trick& currentTrick, char* input, W
 			}
 			state.announceMarriage = false;
 		}
-		currentTrick.player1 = player.hand[playedIndex];
+		if (!state.firstPlayer) {
+			currentTrick.player1 = player.hand[playedIndex];
+		}
+		else {
+			currentTrick.player2 = player.hand[playedIndex];
+		}
 		currentTrick.firstPlayer = state.firstPlayer;
 	}
 	else {
@@ -873,7 +1261,12 @@ bool play(Player& player, RoundState& state, Trick& currentTrick, char* input, W
 				return false;
 			}
 		}
-		currentTrick.player2 = player.hand[playedIndex];
+		if (!state.playerInTurn) {
+			currentTrick.player1 = player.hand[playedIndex];
+		}
+		else {
+			currentTrick.player2 = player.hand[playedIndex];
+		}
 	}
 	std::cout << "Player " << (int)state.playerInTurn + 1 << " played: ";
 	printValue(player.hand[playedIndex].value);
@@ -883,7 +1276,7 @@ bool play(Player& player, RoundState& state, Trick& currentTrick, char* input, W
 	player.cardsInHand--;
 	return true;
 }
-void round(Deck& deck, Player player[], GameSettings settings, RoundState& state, GameHistory gameHistory[], int numberOfRounds, char* input, WORD originalColor)
+void round(Deck& deck, Player player[], GameSettings settings, RoundState& state, GameHistory gameHistory[], int& numberOfRounds, char* input, WORD originalColor)
 {
 	Trick currentTrick, last;
 	while (true) {
@@ -900,7 +1293,7 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 				continue;
 			}
 			else if (!strcomp(input, "rules")) {
-				rules(settings);
+				rules();
 				continue;
 			}
 			else if (!strcomp(input, "hand")) {
@@ -927,12 +1320,27 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 				status(deck, player, state, settings, originalColor);
 				continue;
 			}
-			else if (strContains(input, "marriage")) {
+			else if (strContains(input, "marriage ")) {
 				marriage(player[state.playerInTurn], settings, state, input, originalColor);
 				continue;
 			}
 			else if (!strcomp(input, "history")) {
 				history(gameHistory, numberOfRounds, player);
+				continue;
+			}
+			else if (strContains(input, "save ")) {
+				if (state.firstPlayer != state.playerInTurn) {
+					std::cout << "You must be first in order to save!" << std::endl;
+				}
+				else {
+					save(deck, player, settings, state, gameHistory, last, numberOfRounds, input);
+				}
+				continue;
+			}
+			else if (strContains(input, "load ")) {
+				if (load(deck, player, settings, state, gameHistory, last, numberOfRounds, input)) {
+					break;
+				}
 				continue;
 			}
 			else if (!strcomp(input, "stop")) {
@@ -960,31 +1368,41 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 				std::cout << "Incorrect input. Try again." << std::endl;
 			}
 		}
+		//end of current trick
 		if (!strcomp(input, "stop") || !strcomp(input, "exit") || !strcomp(input, "surrender") || !strcomp(input, "surrender-forever")) {
 			break;
 		}
+		if (strContains(input, "txt")) {
+			continue;
+		}
 		else if (state.playerInTurn != state.firstPlayer) {
-			if (cardComp(currentTrick.player1, currentTrick.player2, state) == 1) {
-				player[state.playerInTurn].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
+			if (cardComp(currentTrick.player1, currentTrick.player2, state) == 1) { // Player 2 won the trick
+				player[1].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
 				std::cout << "Player 2 wins the trick! (+" << (currentTrick.player1.value + currentTrick.player2.value) << " points)" << std::endl;
 				last = currentTrick;
-				last.winner = state.playerInTurn;
-				state.playerInTurn = last.winner;
-				state.firstPlayer = last.winner;
-					if (!state.strictRules) {
-						draw(player, deck, state);
-					}
-			}
-			else {
-				player[state.firstPlayer].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
-				std::cout << "Player 1 wins the trick! (+" << (currentTrick.player1.value + currentTrick.player2.value) << " points)" << std::endl;
-				last = currentTrick;
-				last.winner = state.firstPlayer;
+				last.winner = true; // second player won
 				state.playerInTurn = last.winner;
 				state.firstPlayer = last.winner;
 				if (!state.strictRules) {
 					draw(player, deck, state);
+					orderHand(player[0]);
+					orderHand(player[1]);
 				}
+				
+			}
+			else {
+				player[0].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
+				std::cout << "Player 1 wins the trick! (+" << (currentTrick.player1.value + currentTrick.player2.value) << " points)" << std::endl;
+				last = currentTrick;
+				last.winner = false; // first player won
+				state.playerInTurn = last.winner;
+				state.firstPlayer = last.winner;
+				if (!state.strictRules) {
+					draw(player, deck, state);
+					orderHand(player[0]);
+					orderHand(player[1]);
+				}
+				
 			}
 			if (player[state.playerInTurn].cardsInHand == 0) {
 				if (settings.lastTrick) {
@@ -999,10 +1417,12 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 		}
 		if (deck.size == 0) {
 			state.strictRules = true;
+			deck.size++;
+			std::cout << "All cards in deck are taken. Strict rules apply now!" << std::endl;
 		}
 	}
 }
-void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state, GameHistory* gameHistory, int numberOfRounds, char* input, WORD originalColor)
+void game(Deck& deck, Player player[], GameSettings settings, RoundState& state, GameHistory* gameHistory, int& numberOfRounds, char* input, WORD originalColor)
 {
 	std::cout << "Game started!" << std::endl;
 	do {
@@ -1027,10 +1447,14 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 			gameHistory[numberOfRounds].player1RoundPoints = player[0].roundPoints;
 			gameHistory[numberOfRounds].player2RoundPoints = player[1].roundPoints;
 			numberOfRounds++;
+			state.firstPlayer = !state.playerInTurn;
+			state.playerInTurn = state.firstPlayer;
 		}
 		else if (!strcomp(input, "surrender-forever")) {
 			std::cout << "Player" << (int)state.playerInTurn + 1 << " surrendered the game." << std::endl;
-			std::cout << "Player" << (int)state.playerInTurn + 1 << " wins the game." << std::endl;
+			std::cout << "Player" << (int)!state.playerInTurn + 1 << " wins the game." << std::endl;
+			state.firstPlayer = !state.playerInTurn;
+			state.strictRules = state.firstPlayer;
 			break;
 		}
 		else if (!strcomp(input, "stop")) {
@@ -1137,19 +1561,23 @@ void game(Deck& deck, Player player[2], GameSettings settings, RoundState& state
 		}
 		if (player[0].gamePoints >= 11) {
 			std::cout << "Player 1 wins the game!" << std::endl;
+			state.firstPlayer = false;
 			break;
 		}
 		else if (player[1].gamePoints >= 11) {
 			std::cout << "Player 2 wins the game!" << std::endl;
+			state.firstPlayer = true;
 			break;
 		}
 		else if (numberOfRounds == MAX_ROUNDS) {
 			std::cout << "You have defined all odds and have played 100 rounds! Can you believe it! Let's call it a day and end the game." << std::endl;
 			if (player[0].gamePoints > player[1].gamePoints) {
 				std::cout << "Player 1 wins the game!" << std::endl;
+				state.firstPlayer = false;
 			}
 			else {
 				std::cout << "Player 2 wins the game!" << std::endl;
+				state.firstPlayer = true;
 			}
 			break;
 		}
@@ -1175,34 +1603,28 @@ int main()
 		std::cout << "To change the settings of the game enter 'settings'." << std::endl;
 		std::cout << "To exit application enter 'exit'" << std::endl;
 		userInput(input);
-		if (strContains(input, "load")) {
-
-		}
-		else if (strContains(input, "save")) {
-			if (!player[0].gamePoints || !player[1].gamePoints) {
-				std::cout << "No game in memmory to save!" << std::endl;
-			}
-			else {
-
-			}
-		}
 		formatUserInput(input);
 		if (!strcomp(input, "start")) {
 			startedGame = true;
 			resetRound(player, state, deck, originalColor);
 			player[0].gamePoints = 0;
 			player[1].gamePoints = 0;
+			numberOfRounds = 0;
 			game(deck, player, gameSettings, state, gameHistory, numberOfRounds, input, originalColor);
 		}
 		else if (!strcomp(input, "settings") && !startedGame) {
 			settings(gameSettings, input);
 		}
 		else if (!strcomp(input, "rules")) {
-
+			rules();
 		}
-		if (!strcomp(input, "exit")) {
+		else if (!strcomp(input, "exit")) {
 			return 0;
 		}
+		else {
+			std::cout << "Incorrect input. Try again." << std::endl;
+		}
 	} while (true);
+
 	delete[] input;
 }

@@ -1,0 +1,41 @@
+Rounds_played 0
+Settings
+Target_points 11
+Trump_marriage 40
+Non_trump_marriage 20
+Last_trick 1
+Show_points 1
+
+Round_state
+Player_in_turn 0
+First_player 0
+Is_first_trick 0
+Strict_rules 0
+Announced_marriage 0
+Marriage_suit S
+Trump: C
+
+Last_trick: 
+Player1: 9S
+Player2: 9H
+Winner: 0
+First_player: 0
+
+Players
+Player 0
+Game_points 0
+Round_points 5
+Cards_in_hand 6
+Last_card JD
+Hand QS,KH,JD,1C,KC,JC
+Player 1
+Game_points 0
+Round_points 0
+Cards_in_hand 6
+Last_card QD
+Hand AH,1H,JH,AD,KD,QD
+Deck 8
+Top_card_index 16
+1S,AC,9D,QC,KS,1D,AS,9C
+
+History 
