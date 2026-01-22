@@ -1,3 +1,18 @@
+/**
+*
+* Solution to course project # 2
+* Introduction to programming course
+* Faculty of Mathematics and Informatics of Sofia University
+* Winter semester 2025/2026
+*
+* @author Krasimir Palov
+* @idnumber 08MI0600589
+* @compiler VC
+*
+* main file
+*
+*/
+
 #define NOMINMAX
 #include <iostream>
 #include <windows.h>
@@ -8,6 +23,7 @@ constexpr int DECK_SIZE = 24;
 constexpr int CARDS_IN_HAND = 6;
 constexpr int BUFFER = 100;
 constexpr int MAX_ROUNDS = 100;
+// Structures
 enum CardValue
 {
 	Ace = 11,
@@ -96,50 +112,7 @@ struct Deck
 	size_t topCardIndex = 0;
 	Card deck[DECK_SIZE];
 };
-void fillDeck(Deck& deck)
-{
-	for (size_t i = 0, j = 9; i < DECK_SIZE; i++, j++)
-	{
-		if (j == 15) {
-			j = 9;
-		}
-		switch (j) {
-		case 9: deck.deck[i].value = CardValue::Nine; break;
-		case 10: deck.deck[i].value = CardValue::Ten; break;
-		case 11: deck.deck[i].value = CardValue::Jack; break;
-		case 12: deck.deck[i].value = CardValue::Queen; break;
-		case 13: deck.deck[i].value = CardValue::King; break;
-		case 14: deck.deck[i].value = CardValue::Ace;
-		}
-		if (i < 6) {
-			deck.deck[i].suit = CardSuit::Spades;
-		}
-		else if (i < 12) {
-			deck.deck[i].suit = CardSuit::Hearts;
-		}
-		else if (i < 18) {
-			deck.deck[i].suit = CardSuit::Diamonds;
-		}
-		else {
-			deck.deck[i].suit = CardSuit::Clubs;
-		}
-	}
-}
-void cardSwap(Card& card1, Card& card2)
-{
-	Card temp = card1;
-	card1 = card2;
-	card2 = temp;
-}
-void shuffleDeck(Deck& deck)
-{
-	srand(time(nullptr));
-	for (size_t i = 0; i < DECK_SIZE; i++)
-	{
-		size_t randomNum = i + (rand() % (DECK_SIZE - i));
-		cardSwap(deck.deck[i], deck.deck[randomNum]);
-	}
-}
+// string manipulations
 size_t pow(size_t num, size_t power)
 {
 	size_t result = 1;
@@ -279,6 +252,51 @@ void userInput(char* input)
 		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 	}
 }
+// Deck and card manipulations
+void fillDeck(Deck& deck)
+{
+	for (size_t i = 0, j = 9; i < DECK_SIZE; i++, j++)
+	{
+		if (j == 15) {
+			j = 9;
+		}
+		switch (j) {
+		case 9: deck.deck[i].value = CardValue::Nine; break;
+		case 10: deck.deck[i].value = CardValue::Ten; break;
+		case 11: deck.deck[i].value = CardValue::Jack; break;
+		case 12: deck.deck[i].value = CardValue::Queen; break;
+		case 13: deck.deck[i].value = CardValue::King; break;
+		case 14: deck.deck[i].value = CardValue::Ace;
+		}
+		if (i < 6) {
+			deck.deck[i].suit = CardSuit::Spades;
+		}
+		else if (i < 12) {
+			deck.deck[i].suit = CardSuit::Hearts;
+		}
+		else if (i < 18) {
+			deck.deck[i].suit = CardSuit::Diamonds;
+		}
+		else {
+			deck.deck[i].suit = CardSuit::Clubs;
+		}
+	}
+}
+void cardSwap(Card& card1, Card& card2)
+{
+	Card temp = card1;
+	card1 = card2;
+	card2 = temp;
+}
+void shuffleDeck(Deck& deck)
+{
+	srand(time(nullptr));
+	for (size_t i = 0; i < DECK_SIZE; i++)
+	{
+		size_t randomNum = i + (rand() % (DECK_SIZE - i));
+		cardSwap(deck.deck[i], deck.deck[randomNum]);
+	}
+}
 void orderHand(Player& player)
 {
 	size_t maxIndex = 0;
@@ -328,6 +346,7 @@ bool isSuitInHand(Player player, CardSuit suit)
 bool isSuitsEqual(CardSuit suit1, CardSuit suit2) {
 	return suit1 == suit2;
 }
+// color manip
 WORD getCurrentConsoleColor()
 {
 	CONSOLE_SCREEN_BUFFER_INFO info;
@@ -343,6 +362,7 @@ void setColor(Color color) {
 void resetColor(WORD originalColor) {
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), originalColor);
 }
+// print card values
 void printSuit(CardSuit suit, WORD originalColor)
 {
 	if (suit == CardSuit::Spades) {
@@ -387,15 +407,7 @@ void printCard(Card card, WORD originalColor) {
 	printValue(card.value);
 	printSuit(card.suit, originalColor);
 }
-void printDeck(Deck deck, WORD originalColor)
-{
-	for (size_t i = deck.topCardIndex; i < DECK_SIZE; i++)
-	{
-		printValue(deck.deck[i].value);
-		printSuit(deck.deck[i].suit, originalColor);
-		std::cout << std::endl;
-	}
-}
+// game functions
 void hand(Player player, RoundState state, WORD originalColor)
 {
 	if (!state.isFirstTrick && !state.strictRules) {
@@ -870,6 +882,7 @@ void rules()
 		<< "If he doesn't have it he must play a trump card and if he doesn't have that either he is free to play whatever." << std::endl
 		<< "Important note: At the start of a new game the person who won the previous game starts first." << std::endl;
 }
+// file manip
 void subStrForFiles(char* input, int start, int end)
 {
 	int pos = 0;
@@ -1086,7 +1099,7 @@ void readHand(Card hand[], size_t cardsInHand, std::ifstream& file)
 		}
 	}
 }
-void readDeck(Deck& deck, std::ifstream& file) 
+void readDeck(Deck& deck, std::ifstream& file)
 {
 	char ch;
 	for (size_t i = deck.topCardIndex; i < DECK_SIZE; i++)
@@ -1188,6 +1201,7 @@ bool load(Deck& deck, Player player[], GameSettings& gameSettings, RoundState& s
 	std::cout << "Game loaded from file!" << std::endl;
 	return true;
 }
+// round and game functions
 void draw(Player player[], Deck& deck, RoundState state)
 {
 	player[0].cardsInHand++;
@@ -1388,7 +1402,7 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 					orderHand(player[0]);
 					orderHand(player[1]);
 				}
-				
+
 			}
 			else {
 				player[0].roundPoints += currentTrick.player1.value + currentTrick.player2.value;
@@ -1402,7 +1416,7 @@ void round(Deck& deck, Player player[], GameSettings settings, RoundState& state
 					orderHand(player[0]);
 					orderHand(player[1]);
 				}
-				
+
 			}
 			if (player[state.playerInTurn].cardsInHand == 0) {
 				if (settings.lastTrick) {
@@ -1619,6 +1633,7 @@ int main()
 			rules();
 		}
 		else if (!strcomp(input, "exit")) {
+			delete[] input;
 			return 0;
 		}
 		else {
